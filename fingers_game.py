@@ -12,7 +12,7 @@ from pygame.locals import *
 pygame.init()
 
 # ウィンドウサイズ
-(WIDTH, HEIGHT) = (1280, 480)
+(WIDTH, HEIGHT) = (1800, 1080)
 # スクリーンサイズ
 SCREEN_SIZE = (WIDTH, HEIGHT)
 # SCREEN_SIZEの画面を作成
@@ -107,10 +107,17 @@ class Player():
         self.name_text = FONT.render(self.name, True, (255, 255, 255))
 
         # プレイヤー番号に従って画像を右へずらす
-        self.left_up_img.set_position(num*110, 0)
-        self.left_down_img.set_position(num*110, 0)
-        self.right_up_img.set_position(num*110+30, 0)
-        self.right_down_img.set_position(num*110+30, 0)
+        if num < 16:
+            self.left_up_img.set_position(num*110, 0)
+            self.left_down_img.set_position(num*110, 0)
+            self.right_up_img.set_position(num*110+30, 0)
+            self.right_down_img.set_position(num*110+30, 0)
+        else:
+            self.left_up_img.set_position((num-16)*110, 140)
+            self.left_down_img.set_position((num-16)*110, 140)
+            self.right_up_img.set_position((num-16)*110+30, 140)
+            self.right_down_img.set_position((num-16)*110+30, 140)
+
 
     def draw_hand(self, mode):
         # 画像の描画
@@ -138,7 +145,12 @@ class Player():
         self.saying_num = random.randint(0, finger_max)
         print('|' + self.name +'|' + " said " + str(self.saying_num))
         text = FONT.render('said ' + str(self.saying_num), True, (0, 255, 0))
-        SCREEN.blit(text, (self.num * 110 + 40, 100))
+        if self.num < 16:
+            SCREEN.blit(text, (self.num * 110 + 40, 100))
+        else:
+            SCREEN.blit(text, ((self.num-16) * 110 + 40, 240))
+        text = FONT.render('|' + self.name + '|'' said ' + str(self.saying_num), True, (0, 255, 0))
+        SCREEN.blit(text, (600, 340))
 
 
     def up_finger(self, all_fingers_num):
@@ -154,28 +166,40 @@ class Player():
         return up_finger_num
 
     def draw_player_name(self):
-        SCREEN.blit(self.name_text, (self.num*110+30, 0))
+        if self.current_hands_num == 1:
+            self.name_text = FONT.render(self.name, True, (255, 255, 0))
+        if self.num < 16:
+            SCREEN.blit(self.name_text, (self.num*110+30, 0))
+        else:
+            SCREEN.blit(self.name_text, ((self.num-16)*110+30, 140))
 
-def draw_ui(ranking, turn_num, all_fingers_num=-1):
+def draw_ui(ranking, last_one, turn_num, all_fingers_num=-1):
     ranking_title_text = FONT.render('--- RANKING ---', True, (0, 255, 255))
+    last_one_title_text = FONT.render('--- LAST ONE ---', True, (255, 255, 0))
     turn_num_text = FONT.render('Turn: ' + str(turn_num), True, (0, 0, 255))
     
     for j in range(len(ranking)):
         ranking_name = str(j + 1).rjust(len(str(ranking.index(ranking[-1]))) + 1) + ': ' + ranking[j]
         ranking_name_text = FONT.render(ranking_name, True, (0, 255, 255))
-        SCREEN.blit(ranking_name_text, (0, 200 + 20 * j))
+        SCREEN.blit(ranking_name_text, (0, 400 + 20 * j))
+    
+    for j in range(len(last_one)):
+        last_one_name = str(j + 1).rjust(len(str(last_one.index(last_one[-1]))) + 1) + ': ' + last_one[j]
+        last_one_name_text = FONT.render(last_one_name, True, (255, 255, 0))
+        SCREEN.blit(last_one_name_text, (300, 400 + 20 * j))
 
-    SCREEN.blit(ranking_title_text, (0, 180))
-    SCREEN.blit(turn_num_text, (300, 200))
+    SCREEN.blit(ranking_title_text, (0, 360))
+    SCREEN.blit(last_one_title_text, (300, 360))
+    SCREEN.blit(turn_num_text, (600, 400))
     # 全ての指の数を表示する
     if all_fingers_num == -1:
         # 指の宣言前
         all_fingers_num_text = FONT.render('Raised finger(s): ', True, (255, 0, 0))
-        SCREEN.blit(all_fingers_num_text, (300, 180))
+        SCREEN.blit(all_fingers_num_text, (600, 360))
     else:
         # 指の数が宣言されている(ゲーム中)
         all_fingers_num_text = FONT.render('Raised finger(s): ' + str(all_fingers_num), True, (255, 0, 0))
-        SCREEN.blit(all_fingers_num_text, (300, 180))
+        SCREEN.blit(all_fingers_num_text, (600, 360))
         
     
 
@@ -184,8 +208,9 @@ def main():
     pygame.display.update()  # 画面を更新
 
     # プレイヤー人数を入力
-    players_num = \
-        int(input(pycolor.PURPLE + 'How many people in the game?: ' + pycolor.END).rstrip())
+    # players_num = \
+    #     int(input(pycolor.PURPLE + 'How many people in the game?: ' + pycolor.END).rstrip())
+    players_num = 1000
 
     # プレイヤー1人1人を格納するからのリストを作成
     players = []
@@ -197,7 +222,7 @@ def main():
     # Game Start #
     start_time = time.time()
     turns = 1 # turn coutner
-    game_speed = 30
+    game_speed = 0
     finish_num = 0
     ranking = []
     one_left_ranking = []
@@ -237,9 +262,10 @@ def main():
             for j in range(len(players)):
                 # 上がったプレイヤーはスキップ
                 if players[j].is_finished:
+                    players[j].finish_turn = turns
                     continue
                 players[j].draw_hand(0)
-            draw_ui(ranking, turns)
+            draw_ui(ranking, one_left_ranking, turns)
             pygame.display.update()  # 画面を更新
             pygame.time.delay(game_speed)
             # 真っ黒に塗りつぶす
@@ -259,12 +285,14 @@ def main():
             if players[i].saying_num == all_fingers_num:
                 players[i].current_hands_num -= 1
                 if players[i].current_hands_num == 1:
-                    one_left_ranking.append(players[i].name)
+                    # リーチになったとき
+                    one_left_ranking.append(players[i].name + ' (Turn: ' + str(turns) +')')
                     print(pycolor.RED + '|' + players[i].name +'|' + ' one left!' + pycolor.END)
                 if players[i].current_hands_num < 1:
+                    # プレイヤー抜け
                     players[i].is_finished = True
                     finish_num += 1
-                    ranking.append(players[i].name)
+                    ranking.append(players[i].name + ' (Turn: ' + str(turns) +')')
                     print(pycolor.BLUE + '|' + players[i].name +'|' + ' finished!' + pycolor.END)
 
             # 残りのプレイヤーが1人かどうかを調べる
@@ -272,8 +300,8 @@ def main():
                 # 最下位プレイヤーをランキングへ追加
                 for j in range(len(players)):
                     if not players[j].is_finished:
-                        ranking.append(players[j].name)
-                        draw_ui(ranking, turns, all_fingers_num)
+                        ranking.append(players[j].name +' (Turn: ' + str(turns) + ' [lose])')
+                        draw_ui(ranking, one_left_ranking, turns, all_fingers_num)
                         pygame.display.update()  # 画面を更新
                         break
                 print('\n\n')
@@ -283,19 +311,19 @@ def main():
                 print('Total turns: ' + str(turns))
                 print('Total time: {0}' .format(elapsed_time) + '[sec]')
                 print('\n')
-                # print(pycolor.RED + '--- one left ranking ---')
-                # for j in range(len(one_left_ranking)):
-                #     print(str(j + 1).rjust(len(str(one_left_ranking.index(one_left_ranking[-1]))) + 1) + ': ' + one_left_ranking[j])
-                # print(pycolor.END)
+                print(pycolor.RED + '--- one left ranking ---')
+                for j in range(len(one_left_ranking)):
+                    print(str(j + 1).rjust(len(str(one_left_ranking.index(one_left_ranking[-1]))) + 1) + ': ' + one_left_ranking[j])
+                print(pycolor.END)
 
-                # print(pycolor.YELLOW + '--- RANKING ---')
-                # for j in range(len(ranking)):
-                #     print(str(j + 1).rjust(len(str(ranking.index(ranking[-1]))) + 1) + ': ' + ranking[j])
-                # print(pycolor.END + '\n')
+                print(pycolor.YELLOW + '--- RANKING ---')
+                for j in range(len(ranking)):
+                    print(str(j + 1).rjust(len(str(ranking.index(ranking[-1]))) + 1) + ': ' + ranking[j])
+                print(pycolor.END + '\n')
                 game_finished = True
 
 
-            draw_ui(ranking, turns, all_fingers_num)
+            draw_ui(ranking, one_left_ranking, turns, all_fingers_num)
             pygame.display.update()  # 画面を更新
             pygame.time.delay(game_speed)
             # 真っ黒に塗りつぶす
